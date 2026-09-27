@@ -1,4 +1,4 @@
-name: Build ZIP as APK
+name: Build and Sign APK
 
 on:
   push:
@@ -24,14 +24,19 @@ jobs:
         zip -r rebuilt_unsigned.zip .
         mv rebuilt_unsigned.zip rebuilt_unsigned.apk
 
-    - name: Sign APK
+    - name: Sign APK with Uber APK Signer
       run: |
-        # Added -dname to prevent interactive prompts from crashing the workflow
-        keytool -genkey -v -keystore debug.jks -keyalg RSA -keysize 2048 -validity 10000 -alias debugalias -storepass password123 -keypass password123 -dname "CN=Anshu, OU=Hunter, O=Dev, L=Unknown, ST=Unknown, C=IN"
-        jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore debug.jks rebuilt_unsigned.apk debugalias -storepass password123
+        # Download Uber APK Signer
+        wget https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar -O uber-apk-signer.jar
+        
+        # Sign the APK automatically with proper alignment and signature schemes
+        java -jar uber-apk-signer.jar --apks rebuilt_unsigned.apk --out ./final-output
+        
+        # Rename the output to a clean filename for download
+        mv ./final-output/rebuilt_unsigned-aligned-debugSigned.apk final_signed_app.apk
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: final-signed-apk
-        path: rebuilt_unsigned.apk
+        name: final-signed-app
+        path: final_signed_app.apk
