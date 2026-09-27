@@ -1,4 +1,4 @@
-name: Build and Sign APK
+name: Build ZIP as APK
 
 on:
   push:
@@ -18,14 +18,12 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Apktool
+    - name: Zip Files and Rename to APK
       run: |
-        sudo apt update
-        sudo apt install -y apktool
-
-    - name: Rebuild APK with Apktool
-      run: |
-        apktool b . -o rebuilt_unsigned.apk
+        # Zip everything in the current directory and name it as an unsigned apk
+        apt-get update && apt-get install -y zip
+        zip -r rebuilt_unsigned.zip .
+        mv rebuilt_unsigned.zip rebuilt_unsigned.apk
 
     - name: Sign APK
       run: |
