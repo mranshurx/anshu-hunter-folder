@@ -1,4 +1,4 @@
-name: Build and Sign APK
+name: Build and Sign Correct Size APK
 
 on:
   push:
@@ -18,25 +18,35 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Zip Files and Rename to APK
+    - name: Install Build Dependencies
       run: |
-        sudo apt-get update && sudo apt-get install -y zip
-        zip -r rebuilt_unsigned.zip .
+        sudo apt-get update
+        sudo apt-get install -y zip wget
+
+    - name: Package Only App Files (Excluding .git and Junk)
+      run: |
+        # Create a clean staging folder
+        mkdir app_payload
+        
+        # Copy only the necessary game contents, safely ignoring .git, workflows, and temp files
+        rsync -av --exclude='.git' --exclude='.github' --exclude='uber-apk-signer.jar' ./ app_payload/
+        
+        # Zip only the clean payload folder and name it as an APK
+        cd app_payload
+        zip -r ../rebuilt_unsigned.zip .
+        cd ..
         mv rebuilt_unsigned.zip rebuilt_unsigned.apk
 
-    - name: Sign APK with Uber APK Signer
+    - name: Download Uber APK Signer
       run: |
-        # Download Uber APK Signer
         wget https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar -O uber-apk-signer.jar
-        
-        # Sign the APK automatically with proper alignment and signature schemes
-        java -jar uber-apk-signer.jar --apks rebuilt_unsigned.apk --out ./final-output
-        
-        # Rename the output to a clean filename for download
-        mv ./final-output/rebuilt_unsigned-aligned-debugSigned.apk final_signed_app.apk
 
-    - name: Upload Finished APK
+    - name: Sign and Align APK
+      run: |
+        java -jar uber-apk-signer.jar --apks rebuilt_unsigned.apk --out ./final-output
+
+    - name: Upload Final Signed APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: final-signed-app
-        path: final_signed_app.apk
+        name: final-installable-apk
+        path: ./final-output/rebuilt_unsigned-aligned-debugSigned.apk
