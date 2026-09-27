@@ -1,4 +1,4 @@
-name: Build and Sign Correct Size APK
+name: Build and Sign APK
 
 on:
   push:
@@ -18,20 +18,20 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Build Dependencies
+    - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y zip wget
+        sudo apt-get install -y zip wget rsync
 
-    - name: Package Only App Files (Excluding .git and Junk)
+    - name: Package App Files Cleanly
       run: |
-        # Create a clean staging folder
+        # Create a clean folder for the app contents only
         mkdir app_payload
         
-        # Copy only the necessary game contents, safely ignoring .git, workflows, and temp files
+        # Copy everything except git, workflows, and caches to avoid bloat
         rsync -av --exclude='.git' --exclude='.github' --exclude='uber-apk-signer.jar' ./ app_payload/
         
-        # Zip only the clean payload folder and name it as an APK
+        # Zip the payload and rename extension to .apk
         cd app_payload
         zip -r ../rebuilt_unsigned.zip .
         cd ..
@@ -45,7 +45,7 @@ jobs:
       run: |
         java -jar uber-apk-signer.jar --apks rebuilt_unsigned.apk --out ./final-output
 
-    - name: Upload Final Signed APK Artifact
+    - name: Upload Finished APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: final-installable-apk
